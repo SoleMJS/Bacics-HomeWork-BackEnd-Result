@@ -1,52 +1,38 @@
-const fs = require('fs/promises')
-const path = require('path')
 const chalk = require('chalk')
+const Note = require('./models/Note')
 
-const notesPath = path.join(__dirname, 'db.json')
+async function addNote(title, owner) {
+  await Note.create({ title, owner })
 
-async function addNote(title) {
-	const notes = await getNotes()
-	const note = {
-		title,
-		id: Date.now().toString(),
-	}
-
-	notes.push(note)
-
-	await saveNotes(notes)
-	console.log(chalk.bgGreen('Note was added!'))
+  console.log(chalk.bgGreen('Note was added!'))
 }
 
 async function getNotes() {
-	const notes = await fs.readFile(notesPath, { encoding: 'utf-8' })
-	return Array.isArray(JSON.parse(notes)) ? JSON.parse(notes) : []
+  const notes = await Note.find();
+
+  return notes;
 }
 
-async function saveNotes(notes) {
-	await fs.writeFile(notesPath, JSON.stringify(notes))
+async function removeNote(id, owner) {
+  const result = await Note.deleteOne({ _id: id, owner })
+
+  if (result.matchedCount === 0) {
+    throw new Error('No note to delete');
+  }
+
+  console.log(chalk.red(`Note with id="${id}" has been removed.`))
 }
 
-async function printNotes() {
-	const notes = await getNotes()
+async function updateNote(noteData, owner) {
+  const result = await Note.updateOne({ _id: noteData.id, owner }, { title: noteData.title })
 
-	console.log(chalk.bgBlue('Here is the list of notes:'))
-	notes.forEach(note => {
-		console.log(chalk.bgWhite(note.id), chalk.blue(note.title))
-	})
-}
+  if (result.matchedCount === 0) {
+    throw new Error('No note to edit');
+  }
 
-async function removeNote(id) {
-	const notes = await getNotes()
-
-	const filtered = notes.filter(note => note.id !== id)
-
-	await saveNotes(filtered)
-	console.log(chalk.red(`Note with id="${id}" has been removed.`))
+  console.log(chalk.bgGreen(`Note with id="${noteData.id}" has been updated!`))
 }
 
 module.exports = {
-	addNote,
-	getNotes,
-	removeNote,
-	saveNotes,
+  addNote, getNotes, removeNote, updateNote
 }
